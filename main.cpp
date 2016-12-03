@@ -1,14 +1,45 @@
 #include "Torus.h"
 
+/*DODANE*/
+static GLfloat viewer[]= {0.0, 0.0, 10.0};
+static GLfloat R = 10.0;
+static const GLfloat R_min = 2.6;
+static const GLfloat R_max = 23.0;
+
+// inicjalizacja położenia obserwatora
+
+static GLfloat theta = 0.0;   // kąt obrotu obiektu
+static GLfloat fi = 0.0;   // kąt obrotu obiektu
+static GLfloat pix2angle_X;     // przelicznik pikseli na stopnie
+static GLfloat pix2angle_Y;
+
+static GLint status = 0;       // stan klawiszy myszy
+// 0 - nie naciśnięto żadnego klawisza
+// 1 - naciśnięty został lewy klawisz
+// 2 - naciśnięty został prawy klawisz
+
+static int x_pos_old = 0;       // poprzednia pozycja kursora myszy
+
+static int delta_x = 0;        // różnica pomiędzy pozycją bieżącą
+// i poprzednią kursora myszy
+
+static int y_pos_old = 0;
+
+static int delta_y = 0;
+/*********************************/
 
 GLint _nT = 20;
 GLfloat _chainR = 5.0;
 GLint _N = 20;  //wymiar dziedzin_N
+GLfloat D = 0.01;
 point3** colors;
 /*************************************************************************************/
-static GLfloat theta[] = {0.0, 0.0, 0.0}; // trzy kąty obrotu
-// Funkcja rysująca osie układu współrzędnych
-bool spin = true;
+
+enum ChainType{
+    STRAIGHT, CIRCLE
+};
+
+ChainType chainType = STRAIGHT;
 
 enum Model{
     POINTS, NET, TRIANGLES
@@ -164,6 +195,51 @@ void drawTorus(Torus& t)
     }
 }
 
+/*************************************************************************************/
+// Funkcja "bada" stan myszy i ustawia wartości odpowiednich zmiennych globalnych
+
+void Mouse(int btn, int state, int x, int y)
+{
+
+
+    if(btn==GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+    {
+        x_pos_old=x;        // przypisanie aktualnie odczytanej pozycji kursora
+        y_pos_old=y;                     // jako pozycji poprzedniej
+        status = 1;          // wcięnięty został lewy klawisz myszy
+    }
+    else
+    if(btn==GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
+    {
+        y_pos_old = y;
+        status = 2;
+    }
+    else
+        status = 0;          // nie został wcięnięty żaden klawisz
+
+}
+
+/*************************************************************************************/
+// Funkcja "monitoruje" położenie kursora myszy i ustawia wartości odpowiednich
+// zmiennych globalnych
+
+void Motion( GLsizei x, GLsizei y )
+{
+
+
+    delta_x = x - x_pos_old;     // obliczenie różnicy położenia kursora myszy
+
+    x_pos_old = x;            // podstawienie bieżącego położenia jako poprzednie
+
+    delta_y = y - y_pos_old;
+
+    y_pos_old = y;
+
+    glutPostRedisplay();     // przerysowanie obrazu sceny
+}
+
+/*************************************************************************************/
+
 /*
 Funkcja rysująca łańcuch torusów
 nT - ilość torusów w łańcuchu
@@ -259,6 +335,94 @@ void drawChain(GLint nT, GLint chainR)
         glTranslated((-1)*chain3D[i][0], (-1)*chain3D[i][1], (-1)*chain3D[i][2]);
     }
 }
+
+void drawStraightchain(GLint nT, GLfloat torusR, GLfloat d){
+
+    GLfloat r = torusR/8; //promien przekroju brzegu torusa
+    if( d < 0)
+        d = 0;
+    if( d > torusR - 3*r)
+        d = torusR - 3*r;
+
+    GLfloat chainR = 2*torusR - (2*r + d); //odlegołość między środkami torusów
+
+    Torus torus = *(new Torus(_N, r, torusR));
+
+
+    point3* chain3D = new point3[nT];
+
+    GLfloat firstTorus = -(nT/2)*chainR;
+    for (int i = 0; i < nT; ++i) {
+        chain3D[i][0] = firstTorus + i*chainR;
+        chain3D[i][1] = 0;
+        chain3D[i][2] = 0;
+    }
+
+    for (int i = 0; i < nT ; ++i) {
+
+        point3 vec; //vector wyznaczający prostą, dookoła której obrócimy torus
+        /*Obracamy co drugi torus w łańcuchu*/
+        bool obrot = !(i%2 == 0);
+        if(obrot)
+        {
+
+            GLint id1; //indeks  następnego torusa
+            GLint id2; //indeks poprzedniego torusa
+
+            if( i == nT - 1)
+                id1 = i;
+            else
+                id1 = i + 1;
+
+            if( i == 0 )
+                id2 = i;
+            else
+                id2 = i - 1;
+
+            vec[0] = chain3D[id1][0] - chain3D[id2][0];
+            vec[1] = chain3D[id1][1] - chain3D[id2][1];
+            vec[2] = chain3D[id1][2] - chain3D[id2][2];
+            /*Co drugi torus przesuwamy tak, aby jego środek był
+            na odcinku łączącym poprzedni i następny torus w łańcuchu.
+            Robimy to, aby po obrocie, krawędzie torusów na siebie nie zachodziły*/
+            point3 med_vec;
+            med_vec[0] = (-1)*vec[0]/2;
+            med_vec[1] = (-1)*vec[1]/2;
+            med_vec[2] = (-1)*vec[2]/2;
+
+            point3 u;
+            u[0] = chain3D[id1][0] - chain3D[i][0];
+            u[1] = chain3D[id1][1] - chain3D[i][1];
+            u[2] = chain3D[id1][2] - chain3D[i][2];
+
+            point3 x;
+            x[0] = u[0] + med_vec[0];
+            x[1] = u[1] + med_vec[1];
+            x[2] = u[2] + med_vec[2];
+
+            chain3D[i][0] += x[0];
+            chain3D[i][1] += x[1];
+            chain3D[i][2] += x[2];
+        }
+
+        //Przesunięcie  z (0,0,0) do punktu w którym będzie narysowany torus
+        glTranslated(chain3D[i][0], chain3D[i][1], chain3D[i][2]);
+
+        //Obrót o 90 stopni co drugiego torusa wokół osi wyznaczanej przez wektor vec
+        if(obrot)
+            glRotated(90.0f, vec[0], vec[1], vec[2]);
+
+        drawTorus(torus);
+
+        //Obrót z powrotem
+        if(obrot)
+            glRotated(-90.0f, vec[0], vec[1], vec[2]);
+
+        //Przesunięcie z powrotem do (0,0,0)
+        glTranslated((-1)*chain3D[i][0], (-1)*chain3D[i][1], (-1)*chain3D[i][2]);
+    }
+}
+
 void RenderScene(void)
 {
 
@@ -268,17 +432,46 @@ void RenderScene(void)
     glLoadIdentity();
     // Czyszczenie macierzy bieżącej
 
-    //Axes();
+    gluLookAt(viewer[0],viewer[1],viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    // Zdefiniowanie położenia obserwatora
+
+    if(status == 1)                     // jeśli lewy klawisz myszy wcięnięty
+    {
+
+
+        theta += delta_x*pix2angle_X;
+        fi += delta_y*pix2angle_Y;   // modyfikacja kąta obrotu o kat proporcjonalny
+        // do różnicy położeń kursora myszy
+
+        //viewer[0] = R * cos(theta) * cos(fi);
+        //viewer[1] = R * sin(fi);
+        //viewer[2] = R * sin(theta) * cos(fi);
+    }
+    if(status == 2)
+    {
+        viewer[2] += delta_y*0.05;
+        if (viewer[2] > R_max)
+            viewer[2] = R_max;
+
+        if(viewer[2] < R_min)
+            viewer[2] = R_min;
+
+        std::cout<<viewer[2]<<std::endl;
+    }
+
+    gluLookAt(viewer[0],viewer[1],viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    glRotatef(theta, 0.0, 1.0, 0.0);  //obrót obiektu o nowy kąt
+    glRotatef(fi, 1.0, 0.0, 0.0);
+
+
+    Axes();
     // Narysowanie osi przy pomocy funkcji zdefiniowanej wyżej
 
-    glRotatef(theta[0], 1.0, 0.0, 0.0);
 
-    glRotatef(theta[1], 0.0, 1.0, 0.0);
-
-    glRotatef(theta[2], 0.0, 0.0, 1.0);
-
-
-    drawChain(_nT, _chainR);
+    switch (chainType){
+        case STRAIGHT:{ drawStraightchain(_nT, 0.5, D); break;}
+        case CIRCLE: { drawChain(_nT, (GLint )_chainR); break;}
+        }
 
 
     glFlush();
@@ -297,33 +490,39 @@ void RenderScene(void)
 
 void keys(unsigned char key, int x, int y)
 {
-    if(key == 'p') model = POINTS;
-    if(key == 'w') model = NET;
-    if(key == 's') model = TRIANGLES;
-    if(key == ' ') spin = !spin;
-    if(key == '+') _nT += 2;
-    if(key == '-' && _nT > 10) _nT -= 2;
-
-    RenderScene(); // przerysowanie obrazu sceny
-}
-
-void spinEgg()
-{
-
-    if(spin)
-    {
-        theta[0] -= 0.5;
-        if( theta[0] > 360.0 ) theta[0] -= 360.0;
-
-        theta[1] -= 0.5;
-        if( theta[1] > 360.0 ) theta[1] -= 360.0;
-
-        theta[2] -= 0.5;
-        if( theta[2] > 360.0 ) theta[2] -= 360.0;
-
-        glutPostRedisplay(); //odświeżenie zawartości aktualnego okna
+    switch (key) {
+        case 'p': { model = POINTS; break;}
+        case 'w': { model = NET; break;}
+        case 's': { model = TRIANGLES; break;}
+        case '+': { _nT += 2; break;}
+        case '-': {
+            if (_nT > 10)
+                _nT -= 2;
+            break;
+        }
+        case '>': {
+            if(chainType == STRAIGHT)
+                D += 0.01; break;
+        }
+        case '<': {
+            if(chainType == STRAIGHT)
+                D -= 0.01;
+            break;
+        }
+        case 't': {
+            if(chainType == STRAIGHT)
+                chainType = CIRCLE;
+            else
+                chainType = STRAIGHT;
+            break;
+        }
     }
 
+
+
+
+
+    RenderScene(); // przerysowanie obrazu sceny
 }
 
 void MyInit(void)
@@ -345,6 +544,8 @@ void MyInit(void)
 
 void ChangeSize(GLsizei horizontal, GLsizei vertical )
 {
+    pix2angle_X = 360/(float)horizontal;  // przeliczenie pikseli na stopnie
+    pix2angle_Y = 360/(float)vertical;  // przeliczenie pikseli na stopnie
 
     GLfloat AspectRatio;
     // Deklaracja zmiennej AspectRatio  określającej proporcję
@@ -364,27 +565,24 @@ void ChangeSize(GLsizei horizontal, GLsizei vertical )
     glLoadIdentity();
     // Czyszcznie macierzy bieżącej
 
-    AspectRatio = (GLfloat)horizontal/(GLfloat)vertical;
-    // Wyznaczenie współczynnika  proporcji okna
-    // Gdy okno nie jest kwadratem wymagane jest określenie tak zwanej
-    // przestrzeni ograniczającej pozwalającej zachować właściwe
-    // proporcje rysowanego obiektu.
-    // Do okreslenia przestrzeni ograniczjącej służy funkcja
-    // glOrtho(...)
+    gluPerspective(70, 1.0, 1.0, 50.0);
+    // Ustawienie parametrów dla rzutu perspektywicznego
+
 
     if(horizontal <= vertical)
-
-        glOrtho(-7.5,7.5,-7.5/AspectRatio,7.5/AspectRatio,10.0, -10.0);
+        glViewport(0, (vertical-horizontal)/2, horizontal, horizontal);
 
     else
-
-        glOrtho(-7.5*AspectRatio,7.5*AspectRatio,-7.5,7.5,10.0,-10.0);
+        glViewport((horizontal-vertical)/2, 0, vertical, vertical);
+    // Ustawienie wielkości okna okna widoku (viewport) w zależności
+    // relacji pomiędzy wysokością i szerokością okna
 
     glMatrixMode(GL_MODELVIEW);
     // Przełączenie macierzy bieżącej na macierz widoku modelu
 
     glLoadIdentity();
-    // Czyszcenie macierzy bieżącej
+    // Czyszczenie macierzy bieżącej
+
 
 }
 
@@ -418,7 +616,7 @@ int main(int argc, char** argv)
 
     glutInitWindowSize(300, 300);
 
-    glutCreateWindow("TorusChain");
+    glutCreateWindow("TorusChain interactive");
 
     glutDisplayFunc(RenderScene);
     // Określenie, że funkcja RenderScene będzie funkcją zwrotną
@@ -429,6 +627,12 @@ int main(int argc, char** argv)
     // Dla aktualnego okna ustala funkcję zwrotną odpowiedzialną
     // zazmiany rozmiaru okna
 
+    glutMouseFunc(Mouse);
+    // Ustala funkcję zwrotną odpowiedzialną za badanie stanu myszy
+
+    glutMotionFunc(Motion);
+    // Ustala funkcję zwrotną odpowiedzialną za badanie ruchu myszy
+
     MyInit();
     // Funkcja MyInit() (zdefiniowana powyżej) wykonuje wszelkie
     // inicjalizacje konieczne  przed przystąpieniem do renderowania
@@ -437,8 +641,6 @@ int main(int argc, char** argv)
     // Włączenie mechanizmu usuwania powierzchni niewidocznych
 
     glutKeyboardFunc(keys);
-
-    glutIdleFunc(spinEgg);
 
     glutMainLoop();
     // Funkcja uruchamia szkielet biblioteki GLUT
