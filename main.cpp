@@ -26,6 +26,7 @@ static int delta_x = 0;        // różnica pomiędzy pozycją bieżącą
 static int y_pos_old = 0;
 
 static int delta_y = 0;
+
 /*********************************/
 
 GLint _nT = 20;
@@ -33,6 +34,7 @@ GLfloat _chainR = 5.0;
 GLint _N = 20;  //wymiar dziedzin_N
 GLfloat D = 0.01;
 point3** colors;
+float A = 0.0;
 /*************************************************************************************/
 
 enum ChainType{
@@ -200,7 +202,7 @@ void drawTorus(Torus& t)
 
 void Mouse(int btn, int state, int x, int y)
 {
-
+                       // jako pozycji poprzedniej
 
     if(btn==GLUT_LEFT_BUTTON && state == GLUT_DOWN)
     {
@@ -215,7 +217,11 @@ void Mouse(int btn, int state, int x, int y)
         status = 2;
     }
     else
-        status = 0;          // nie został wcięnięty żaden klawisz
+    {
+        status = 0;
+        y_pos_old=y;
+    }
+                 // nie został wcięnięty żaden klawisz
 
 }
 
@@ -234,6 +240,18 @@ void Motion( GLsizei x, GLsizei y )
     delta_y = y - y_pos_old;
 
     y_pos_old = y;
+
+    glutPostRedisplay();     // przerysowanie obrazu sceny
+}
+
+void passiveMotion( GLsizei x, GLsizei y )
+{
+
+    GLint windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
+    y = - ( y - (windowHeight/2));
+
+    A = 0.0008*y;
+    std::cout << y << std::endl;
 
     glutPostRedisplay();     // przerysowanie obrazu sceny
 }
@@ -354,7 +372,7 @@ void drawStraightchain(GLint nT, GLfloat torusR, GLfloat d){
     GLfloat firstTorus = -(nT/2)*chainR;
     for (int i = 0; i < nT; ++i) {
         chain3D[i][0] = firstTorus + i*chainR;
-        chain3D[i][1] = 0;
+        chain3D[i][1] = A*(pow(chain3D[i][0], 2));
         chain3D[i][2] = 0;
     }
 
@@ -435,9 +453,9 @@ void RenderScene(void)
     gluLookAt(viewer[0],viewer[1],viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
     // Zdefiniowanie położenia obserwatora
 
+
     if(status == 1)                     // jeśli lewy klawisz myszy wcięnięty
     {
-
 
         theta += delta_x*pix2angle_X;
         fi += delta_y*pix2angle_Y;   // modyfikacja kąta obrotu o kat proporcjonalny
@@ -456,7 +474,7 @@ void RenderScene(void)
         if(viewer[2] < R_min)
             viewer[2] = R_min;
 
-        std::cout<<viewer[2]<<std::endl;
+        //std::cout<<viewer[2]<<std::endl;
     }
 
     gluLookAt(viewer[0],viewer[1],viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
@@ -632,6 +650,8 @@ int main(int argc, char** argv)
 
     glutMotionFunc(Motion);
     // Ustala funkcję zwrotną odpowiedzialną za badanie ruchu myszy
+
+    glutPassiveMotionFunc(passiveMotion);
 
     MyInit();
     // Funkcja MyInit() (zdefiniowana powyżej) wykonuje wszelkie
