@@ -251,6 +251,7 @@ void passiveMotion( GLsizei x, GLsizei y )
     y = - ( y - (windowHeight/2));
 
     A = 0.0008*y;
+
     std::cout << y << std::endl;
 
     glutPostRedisplay();     // przerysowanie obrazu sceny
@@ -354,6 +355,7 @@ void drawChain(GLint nT, GLint chainR)
     }
 }
 
+
 void drawStraightchain(GLint nT, GLfloat torusR, GLfloat d){
 
     GLfloat r = torusR/8; //promien przekroju brzegu torusa
@@ -370,11 +372,74 @@ void drawStraightchain(GLint nT, GLfloat torusR, GLfloat d){
     point3* chain3D = new point3[nT];
 
     GLfloat firstTorus = -(nT/2)*chainR;
+    int beg;
     for (int i = 0; i < nT; ++i) {
-        chain3D[i][0] = firstTorus + i*chainR;
-        chain3D[i][1] = A*(pow(chain3D[i][0], 2));
+         float X = firstTorus + i*chainR;
+        if(X==0)
+            beg = i;
+
+        /*wyliczamy kolejne punkty należące do funkcji kwadratowej*/
+        chain3D[i][0] = X;
+        chain3D[i][1] = A*(float)pow(chain3D[i][0], 2);
         chain3D[i][2] = 0;
     }
+
+    std::cout <<"BEG " << beg <<std::endl;
+
+    /*liczymy punkty dla x > 0 */
+    if( A != 0){
+        for(int i = beg; i < nT-1; ++i){
+            point3 vector;
+            /*Wektor pokazujący kierunek mieszy punktem a punktem następnym*/
+            vector[0] = chain3D[i+1][0] - chain3D[i][0];
+            vector[1] = chain3D[i+1][1] - chain3D[i][1];
+            vector[2] = chain3D[i+1][2] - chain3D[i][2];
+
+            /*Tworzymy wektor jednostkowy*/
+            double vectorLength = sqrt( vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2]);
+            vector[0] = (float)(vector[0]/vectorLength);
+            vector[1] = (float)(vector[1]/vectorLength);
+            vector[2] = (float)(vector[2]/vectorLength);
+
+            /*Mnożymy przez odległośc między torusami*/
+            vector[0] = vector[0]*chainR;
+            vector[1] = vector[1]*chainR;
+            vector[2] = vector[2]*chainR;
+
+            /*Wyliczamy środek następnego torusa*/
+            chain3D[i+1][0] = chain3D[i][0] + vector[0];
+            chain3D[i+1][1] = chain3D[i][1] + vector[1];
+            chain3D[i+1][2] = chain3D[i][2] + vector[2];
+
+        }
+
+        /*liczymy punkty dla x > 0 */
+        for(int i = beg; i > 0; --i){
+            point3 vector;
+            /*Wektor pokazujący kierunek mieszy punktem a punktem następnym*/
+            vector[0] = chain3D[i-1][0] - chain3D[i][0];
+            vector[1] = chain3D[i-1][1] - chain3D[i][1];
+            vector[2] = chain3D[i-1][2] - chain3D[i][2];
+
+            /*Tworzymy wektor jednostkowy*/
+            double vectorLength = sqrt( vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2]);
+            vector[0] = (float)(vector[0]/vectorLength);
+            vector[1] = (float)(vector[1]/vectorLength);
+            vector[2] = (float)(vector[2]/vectorLength);
+
+            /*Mnożymy przez odległośc między torusami*/
+            vector[0] = vector[0]*chainR;
+            vector[1] = vector[1]*chainR;
+            vector[2] = vector[2]*chainR;
+
+            /*Wyliczamy środek następnego torusa*/
+            chain3D[i-1][0] = chain3D[i][0] + vector[0];
+            chain3D[i-1][1] = chain3D[i][1] + vector[1];
+            chain3D[i-1][2] = chain3D[i][2] + vector[2];
+        }
+    }
+
+
 
     for (int i = 0; i < nT ; ++i) {
 
@@ -392,35 +457,12 @@ void drawStraightchain(GLint nT, GLfloat torusR, GLfloat d){
             else
                 id1 = i + 1;
 
-            if( i == 0 )
-                id2 = i;
-            else
-                id2 = i - 1;
+
+            id2 = i - 1;
 
             vec[0] = chain3D[id1][0] - chain3D[id2][0];
             vec[1] = chain3D[id1][1] - chain3D[id2][1];
             vec[2] = chain3D[id1][2] - chain3D[id2][2];
-            /*Co drugi torus przesuwamy tak, aby jego środek był
-            na odcinku łączącym poprzedni i następny torus w łańcuchu.
-            Robimy to, aby po obrocie, krawędzie torusów na siebie nie zachodziły*/
-            point3 med_vec;
-            med_vec[0] = (-1)*vec[0]/2;
-            med_vec[1] = (-1)*vec[1]/2;
-            med_vec[2] = (-1)*vec[2]/2;
-
-            point3 u;
-            u[0] = chain3D[id1][0] - chain3D[i][0];
-            u[1] = chain3D[id1][1] - chain3D[i][1];
-            u[2] = chain3D[id1][2] - chain3D[i][2];
-
-            point3 x;
-            x[0] = u[0] + med_vec[0];
-            x[1] = u[1] + med_vec[1];
-            x[2] = u[2] + med_vec[2];
-
-            chain3D[i][0] += x[0];
-            chain3D[i][1] += x[1];
-            chain3D[i][2] += x[2];
         }
 
         //Przesunięcie  z (0,0,0) do punktu w którym będzie narysowany torus
@@ -482,7 +524,7 @@ void RenderScene(void)
     glRotatef(fi, 1.0, 0.0, 0.0);
 
 
-    Axes();
+    //Axes();
     // Narysowanie osi przy pomocy funkcji zdefiniowanej wyżej
 
 
