@@ -1,3 +1,4 @@
+
 #include "Torus.h"
 
 /*DODANE*/
@@ -247,6 +248,7 @@ void Motion( GLsizei x, GLsizei y )
 void passiveMotion( GLsizei x, GLsizei y )
 {
 
+    /*Przestawienie ukladu współrzędnych dla kursora myszki, tak aby odpowiadał współrzędnym rysowania*/
     GLint windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
     y = - ( y - (windowHeight/2));
 
@@ -503,9 +505,6 @@ void RenderScene(void)
         fi += delta_y*pix2angle_Y;   // modyfikacja kąta obrotu o kat proporcjonalny
         // do różnicy położeń kursora myszy
 
-        //viewer[0] = R * cos(theta) * cos(fi);
-        //viewer[1] = R * sin(fi);
-        //viewer[2] = R * sin(theta) * cos(fi);
     }
     if(status == 2)
     {
@@ -516,7 +515,6 @@ void RenderScene(void)
         if(viewer[2] < R_min)
             viewer[2] = R_min;
 
-        //std::cout<<viewer[2]<<std::endl;
     }
 
     gluLookAt(viewer[0],viewer[1],viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
