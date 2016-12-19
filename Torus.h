@@ -19,11 +19,13 @@ class Torus
 {
 private:
     point3** torus;
+
     GLfloat r;
     GLfloat R;
     GLint n;
-
+    void calculateNormalVector(int i, point3& normalVector, GLfloat u, GLfloat v);
 public:
+    point3** normVec;
     Torus(GLint N, GLfloat r, GLfloat R);
     ~Torus();
 
