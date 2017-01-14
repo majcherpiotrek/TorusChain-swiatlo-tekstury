@@ -1,6 +1,7 @@
 
 #include "Torus.h"
-
+static int step = 0;
+static int stepI = 0;
 /*DODANE*/
 static GLfloat viewer[]= {0.0, 0.0, 10.0};
 static GLfloat R = 10.0;
@@ -121,28 +122,31 @@ void drawTorus(Torus& t)
             {
                 for(int k = 0; k < N-1; k++)
                 {
-                    glBegin(GL_LINES);
+                    if(k==step && i ==stepI) {
 
 
-                    glColor3f(0.0f, 0.0f, 1.0f);
-                    glVertex3f(t.getX(i,k), t.getY(i,k), t.getZ(i,k));
-                    glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
-                    glEnd();
+                        glBegin(GL_LINES);
 
-                    glBegin(GL_LINES);
 
-                    glColor3f(0.0f, 0.0f, 1.0f);
-                    glVertex3f(t.getX(i,k), t.getY(i,k), t.getZ(i,k));
-                    glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
-                    glEnd();
+                        glColor3f(0.0f, 0.0f, 1.0f);
+                        glVertex3f(t.getX(i, k), t.getY(i, k), t.getZ(i, k));
+                        glVertex3f(t.getX(i, k + 1), t.getY(i, k + 1), t.getZ(i, k + 1));
+                        glEnd();
 
-                    glBegin(GL_LINES);
+                        glBegin(GL_LINES);
 
-                    glColor3f(0.0f, 0.0f, 1.0f);
-                    glVertex3f(t.getX(i,k), t.getY(i,k), t.getZ(i,k));
-                    glVertex3f(t.getX(i+1,k+1), t.getY(i+1,k+1), t.getZ(i+1,k+1));
-                    glEnd();
+                        glColor3f(0.0f, 0.0f, 1.0f);
+                        glVertex3f(t.getX(i, k), t.getY(i, k), t.getZ(i, k));
+                        glVertex3f(t.getX(i + 1, k), t.getY(i + 1, k), t.getZ(i + 1, k));
+                        glEnd();
 
+                        glBegin(GL_LINES);
+
+                        glColor3f(0.0f, 0.0f, 1.0f);
+                        glVertex3f(t.getX(i, k), t.getY(i, k), t.getZ(i, k));
+                        glVertex3f(t.getX(i + 1, k + 1), t.getY(i + 1, k + 1), t.getZ(i + 1, k + 1));
+                        glEnd();
+                    }
                 }
             }
             break;
@@ -189,7 +193,7 @@ void drawTorus(Torus& t)
                         glNormal3fv(t.normVec[i][k+1]);
                         glColor3f(colors[i][k+1][0], colors[i][k+1][1], colors[i][k+1][2]);
                         glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
-                        glNormal3fv(t.normVec[i+1][k]);
+                        glNormal3fv(t.normVec[0][k]);
                         glColor3f(colors[0][k][0], colors[0][k][1], colors[0][k][2]);
                         glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
                         glEnd();
@@ -198,10 +202,10 @@ void drawTorus(Torus& t)
                         glNormal3fv(t.normVec[i][k+1]);
                         glColor3f(colors[i][k+1][0], colors[i][k+1][1], colors[i][k+1][2]);
                         glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
-                        glNormal3fv(t.normVec[i+1][k+1]);
+                        glNormal3fv(t.normVec[0][k+1]);
                         glColor3f(colors[0][k+1][0], colors[0][k+1][1], colors[0][k+1][2]);
                         glVertex3f(t.getX(i+1,k+1), t.getY(i+1,k+1), t.getZ(i+1,k+1));
-                        glNormal3fv(t.normVec[i+1][k]);
+                        glNormal3fv(t.normVec[0][k]);
                         glColor3f(colors[0][k][0], colors[0][k][1], colors[0][k][2]);
                         glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
                         glEnd();
@@ -259,19 +263,6 @@ void Motion( GLsizei x, GLsizei y )
     glutPostRedisplay();     // przerysowanie obrazu sceny
 }
 
-void passiveMotion( GLsizei x, GLsizei y )
-{
-
-    /*Przestawienie ukladu współrzędnych dla kursora myszki, tak aby odpowiadał współrzędnym rysowania*/
-    GLint windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
-    y = - ( y - (windowHeight/2));
-
-    A = 0.0008*y;
-
-    std::cout << y << std::endl;
-
-    glutPostRedisplay();     // przerysowanie obrazu sceny
-}
 
 /*************************************************************************************/
 
@@ -587,6 +578,23 @@ void keys(unsigned char key, int x, int y)
             else
                 chainType = STRAIGHT;
             break;
+            case 'x': {
+                step++;
+                break;
+            }
+
+            case 'z':{
+                step--;
+                break;
+            }
+            case 'i': {
+                stepI++;
+                break;
+            }
+            case 'u':{
+                stepI--;
+                break;
+            }
         }
     }
 
@@ -793,7 +801,6 @@ int main(int argc, char** argv)
     glutMotionFunc(Motion);
     // Ustala funkcję zwrotną odpowiedzialną za badanie ruchu myszy
 
-    glutPassiveMotionFunc(passiveMotion);
 
     MyInit();
     // Funkcja MyInit() (zdefiniowana powyżej) wykonuje wszelkie

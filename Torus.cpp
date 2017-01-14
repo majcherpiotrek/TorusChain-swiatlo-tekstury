@@ -4,15 +4,17 @@
 
 #include "Torus.h"
 
-void Torus::calculateNormalVector(int i, point3& normalVector, GLfloat u, GLfloat v){
+void Torus::calculateNormalVector(int k, point3& normalVector, GLfloat u, GLfloat v){
     GLfloat Xu, Xv, Yu, Yv, Zu, Zv;
 
-    Xu = (GLfloat)(cos(M_PI*v)*((-450) * pow(u, 4) + 900 * pow(u, 3) + (-810) * pow(u, 2) +360 * u - 45));
-    Xv = (GLfloat)(M_PI*(90 * pow(u, 5) + (-225) * pow(u, 4) + 270 * pow(u, 3) + (-180) * pow(u, 2) + 45 * u)*sin(M_PI*v));
-    Yu = (GLfloat)(640 * pow(u, 3) + (-960) * pow(u, 2) + 320 * u);
-    Yv = 0;
-    Zu = (GLfloat)(sin(M_PI*v)*((-450) * pow(u, 4) + 900 * pow(u, 3) + (-810) * pow(u, 2) + 360 * u - 45));
-    Zv = (GLfloat)((-1)*M_PI*cos(M_PI*v)*(90 * pow(u, 5) + (-225) * pow(u, 4) + 270 * pow(u, 3) + (-180) * pow(u, 2) + 45 * u));
+    Xu = (GLfloat)(-2*M_PI*sin(2*M_PI*u)*(r*cos(2*M_PI*v)+R));
+    Xv = (GLfloat)(-2*M_PI*r*cos(2*M_PI*u)*sin(2*M_PI*v));
+
+    Yu = (GLfloat)(2*M_PI*cos(2*M_PI*u)*(r*cos(2*M_PI*v)+R));
+    Yv = (GLfloat)(-2*M_PI*r*sin(2*M_PI*u)*sin(2*M_PI*v));
+
+    Zu = (GLfloat)(0);
+    Zv = (GLfloat)(2*M_PI*r*cos(2*M_PI*v));
 
     normalVector[0] = Yu*Zv - Zu*Yv;
     normalVector[1] = Zu*Xv - Xu*Zv;
@@ -58,9 +60,9 @@ Torus::Torus(GLint N, GLfloat _r, GLfloat _R)
         {
             calculateNormalVector(i, normVec[i][k], param2D[i][k][0], param2D[i][k][1]);
             /*Wyliczanie punktów torusa na podstawie wzorów z instrukcji*/
-            torus[i][k][0] = ( R + r*cos(2*M_PI*param2D[i][k][1]) )*cos(2*M_PI*param2D[i][k][0]);
-            torus[i][k][1] = ( R + r*cos(2*M_PI*param2D[i][k][1]) )*sin(2*M_PI*param2D[i][k][0]);
-            torus[i][k][2] = r*sin(2*M_PI*param2D[i][k][1]);
+            torus[i][k][0] = (float)(( R + r*cos(2*M_PI*param2D[i][k][1]) )*cos(2*M_PI*param2D[i][k][0]));
+            torus[i][k][1] = (float)(( R + r*cos(2*M_PI*param2D[i][k][1]) )*sin(2*M_PI*param2D[i][k][0]));
+            torus[i][k][2] = (float)(r*sin(2*M_PI*param2D[i][k][1]));
         }
     }
 
@@ -98,15 +100,7 @@ GLint Torus::getN()
     return n;
 }
 
-GLfloat Torus::getOuterR()
-{
-    return R;
-}
 
-GLfloat Torus::getInnerR()
-{
-    return r;
-}
 
 
 
