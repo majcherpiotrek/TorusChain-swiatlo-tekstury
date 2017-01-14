@@ -26,6 +26,7 @@ private:
     void calculateNormalVector(int k, point3& normalVector, GLfloat u, GLfloat v);
 public:
     point3** normVec;
+    point2** tekstury;
     Torus(GLint N, GLfloat r, GLfloat R);
     ~Torus();
 

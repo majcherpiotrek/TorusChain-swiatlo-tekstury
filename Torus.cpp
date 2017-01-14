@@ -51,14 +51,18 @@ Torus::Torus(GLint N, GLfloat _r, GLfloat _R)
 
     torus = new point3*[n];
     normVec = new point3*[n];
+    tekstury = new point2*[n];
 
     for(int i = 0; i < n; i++)
     {
         torus[i] = new point3[N];
         normVec[i] = new point3[N];
+        tekstury[i] = new point2[N];
         for(int k = 0; k < n; k++)
         {
             calculateNormalVector(i, normVec[i][k], param2D[i][k][0], param2D[i][k][1]);
+            tekstury[i][k][0] = param2D[i][k][0];
+            tekstury[i][k][1] = param2D[i][k][1];
             /*Wyliczanie punktów torusa na podstawie wzorów z instrukcji*/
             torus[i][k][0] = (float)(( R + r*cos(2*M_PI*param2D[i][k][1]) )*cos(2*M_PI*param2D[i][k][0]));
             torus[i][k][1] = (float)(( R + r*cos(2*M_PI*param2D[i][k][1]) )*sin(2*M_PI*param2D[i][k][0]));

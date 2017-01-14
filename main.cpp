@@ -12,8 +12,6 @@ static GLfloat viewer[] = { 0.0, 0.0, 10.0 };
 static GLfloat theta[] = { 0.0, 0.0, 0.0 }; // trzy kąty obrotu
 // inicjalizacja położenia obserwatora
 
-static GLfloat pix2angle; // przelicznik pikseli na stopnie
-
 int x_pos_old = 0;
 
 int y_pos_old = 0;
@@ -24,10 +22,6 @@ static int delta_x = 0;
 
 static int delta_y = 0;
 
-static GLfloat theta1 = 0.0;   // kąt obrotu obiektu
-static GLfloat fi1 = 0.0;   // kąt obrotu obiektu
-static GLfloat theta2 = 0.0;   // kąt obrotu obiektu
-static GLfloat fi2 = 0.0;   // kąt obrotu obiektu
 static GLfloat pix2angle_X;     // przelicznik pikseli na stopnie
 static GLfloat pix2angle_Y;
 
@@ -54,119 +48,232 @@ enum ChainType{
 
 ChainType chainType = STRAIGHT;
 
-enum Model{
-    POINTS, NET, TRIANGLES
-};
 
-Model model = TRIANGLES;
+/*************************************************************************************/
+// Funkcja wczytuje dane obrazu zapisanego w formacie TGA w pliku o nazwie
+// FileName, alokuje pamięć i zwraca wskaźnik (pBits) do bufora w którym
+// umieszczone są dane.
+// Ponadto udostępnia szerokość (ImWidth), wysokość (ImHeight) obrazu
+// tekstury oraz dane opisujące format obrazu według specyfikacji OpenGL
+// (ImComponents) i (ImFormat).
+// Jest to bardzo uproszczona wersja funkcji wczytującej dane z pliku TGA.
+// Działa tylko dla obrazów wykorzystujących 8, 24, or 32 bitowy kolor.
+// Nie obsługuje plików w formacie TGA kodowanych z kompresją RLE.
+/*************************************************************************************/
 
 
-void Axes(void)
+GLbyte *LoadTGAImage(const char *FileName, GLint *ImWidth, GLint *ImHeight, GLint *ImComponents, GLenum *ImFormat)
 {
 
-    point3  x_min = {-7.0, 0.0, 0.0};
-    point3  x_max = { 7.0, 0.0, 0.0};
-    // początek i koniec obrazu osi x
+/*************************************************************************************/
 
-    point3  y_min = {0.0, -7.0, 0.0};
-    point3  y_max = {0.0,  7.0, 0.0};
-    // początek i koniec obrazu osi y
+// Struktura dla nagłówka pliku  TGA
 
-    point3  z_min = {0.0, 0.0, -7.0};
-    point3  z_max = {0.0, 0.0,  7.0};
-    //  początek i koniec obrazu osi y
 
-    glColor3f(1.0f, 0.0f, 0.0f);  // kolor rysowania osi - czerwony
-    glBegin(GL_LINES); // rysowanie osi x
+#pragma pack(1)
+    typedef struct
+    {
+        GLbyte    idlength;
+        GLbyte    colormaptype;
+        GLbyte    datatypecode;
+        unsigned short    colormapstart;
+        unsigned short    colormaplength;
+        unsigned char     colormapdepth;
+        unsigned short    x_orgin;
+        unsigned short    y_orgin;
+        unsigned short    width;
+        unsigned short    height;
+        GLbyte    bitsperpixel;
+        GLbyte    descriptor;
+    }TGAHEADER;
+#pragma pack(8)
 
-    glVertex3fv(x_min);
-    glVertex3fv(x_max);
+    FILE *pFile;
+    TGAHEADER tgaHeader;
+    unsigned long lImageSize;
+    short sDepth;
+    GLbyte    *pbitsperpixel = NULL;
 
-    glEnd();
 
-    glColor3f(0.0f, 1.0f, 0.0f);  // kolor rysowania - zielony
-    glBegin(GL_LINES);  // rysowanie osi y
+/*************************************************************************************/
 
-    glVertex3fv(y_min);
-    glVertex3fv(y_max);
+// Wartości domyślne zwracane w przypadku błędu
 
-    glEnd();
+    *ImWidth = 0;
+    *ImHeight = 0;
+    *ImFormat = GL_BGR_EXT;
+    *ImComponents = GL_RGB8;
 
-    glColor3f(0.0f, 0.0f, 1.0f);  // kolor rysowania - niebieski
-    glBegin(GL_LINES); // rysowanie osi z
+    pFile = fopen(FileName, "rb");
+    if(pFile == NULL)
+        return NULL;
 
-    glVertex3fv(z_min);
-    glVertex3fv(z_max);
+/*************************************************************************************/
+// Przeczytanie nagłówka pliku
 
-    glEnd();
+
+    fread(&tgaHeader, sizeof(TGAHEADER), 1, pFile);
+
+
+/*************************************************************************************/
+
+// Odczytanie szerokości, wysokości i głębi obrazu
+
+    *ImWidth = tgaHeader.width;
+    *ImHeight = tgaHeader.height;
+    sDepth = tgaHeader.bitsperpixel / 8;
+
+
+/*************************************************************************************/
+// Sprawdzenie, czy głębia spełnia założone warunki (8, 24, lub 32 bity)
+
+    if(tgaHeader.bitsperpixel != 8 && tgaHeader.bitsperpixel != 24 && tgaHeader.bitsperpixel != 32)
+        return NULL;
+
+/*************************************************************************************/
+
+// Obliczenie rozmiaru bufora w pamięci
+
+
+    lImageSize = tgaHeader.width * tgaHeader.height * sDepth;
+
+
+/*************************************************************************************/
+
+// Alokacja pamięci dla danych obrazu
+
+
+    pbitsperpixel = (GLbyte*)malloc(lImageSize * sizeof(GLbyte));
+
+    if(pbitsperpixel == NULL)
+        return NULL;
+
+    if(fread(pbitsperpixel, lImageSize, 1, pFile) != 1)
+    {
+        free(pbitsperpixel);
+        return NULL;
+    }
+
+
+/*************************************************************************************/
+
+// Ustawienie formatu OpenGL
+
+
+    switch(sDepth)
+
+    {
+
+        case 3:
+
+            *ImFormat = GL_BGR_EXT;
+
+            *ImComponents = GL_RGB8;
+
+            break;
+
+        case 4:
+
+            *ImFormat = GL_BGRA_EXT;
+
+            *ImComponents = GL_RGBA8;
+
+            break;
+
+        case 1:
+
+            *ImFormat = GL_LUMINANCE;
+
+            *ImComponents = GL_LUMINANCE8;
+
+            break;
+
+    };
+
+
+
+    fclose(pFile);
+
+
+
+    return pbitsperpixel;
 
 }
+
+/*************************************************************************************/
 
 /*Funkcja rysująca torus na podstawie przekazanego obiektu w trzech formach w zależności
 od globalnego parametru model*/
 void drawTorus(Torus& t)
 {
     GLint N = t.getN();
-
-
-            for(int i = 0; i < N-1; i++)
+    for(int i = 0; i < N-1; i++)
+    {
+        for(int k = 0; k < N-1; k++)
+        {
+            if(i < N-2) //usuwanie linii łączenia (dla ostatniego i przypisujey kolory z 0)
             {
-                for(int k = 0; k < N-1; k++)
-                {
-                    if(i < N-2) //usuwanie linii łączenia (dla ostatniego i przypisujey kolory z 0)
-                    {
-                        glBegin(GL_TRIANGLES);
-                        glNormal3fv(t.normVec[i][k]);
-                        glColor3f(colors[i][k][0], colors[i][k][1], colors[i][k][2]);
-                        glVertex3f(t.getX(i,k), t.getY(i,k), t.getZ(i,k));
-                        glNormal3fv(t.normVec[i][k+1]);
-                        glColor3f(colors[i][k+1][0], colors[i][k+1][1], colors[i][k+1][2]);
-                        glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
-                        glNormal3fv(t.normVec[i+1][k]);
-                        glColor3f(colors[i+1][k][0], colors[i+1][k][1], colors[i+1][k][2]);
-                        glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
-                        glEnd();
+                glBegin(GL_TRIANGLES);
+                glNormal3fv(t.normVec[i][k]);
+                glTexCoord2f(t.tekstury[i][k][0], t.tekstury[i][k][1]);
+                std::cout<<t.tekstury[i][k][0] << " " << t.tekstury[i][k][1] <<std::endl;
+                glVertex3f(t.getX(i,k), t.getY(i,k), t.getZ(i,k));
 
-                        glBegin(GL_TRIANGLES);
-                        glNormal3fv(t.normVec[i][k+1]);
-                        glColor3f(colors[i][k+1][0], colors[i][k+1][1], colors[i][k+1][2]);
-                        glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
-                        glNormal3fv(t.normVec[i][k+1]);
-                        glColor3f(colors[i+1][k+1][0], colors[i+1][k+1][1], colors[i+1][k+1][2]);
-                        glVertex3f(t.getX(i+1,k+1), t.getY(i+1,k+1), t.getZ(i+1,k+1));
-                        glNormal3fv(t.normVec[i+1][k]);
-                        glColor3f(colors[i+1][k][0], colors[i+1][k][1], colors[i+1][k][2]);
-                        glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
-                        glEnd();
-                    }
-                    else
-                    {
-                        glBegin(GL_TRIANGLES);
-                        glNormal3fv(t.normVec[i][k]);
-                        glColor3f(colors[i][k][0], colors[i][k][1], colors[i][k][2]);
-                        glVertex3f(t.getX(i,k), t.getY(i,k), t.getZ(i,k));
-                        glNormal3fv(t.normVec[i][k+1]);
-                        glColor3f(colors[i][k+1][0], colors[i][k+1][1], colors[i][k+1][2]);
-                        glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
-                        glNormal3fv(t.normVec[0][k]);
-                        glColor3f(colors[0][k][0], colors[0][k][1], colors[0][k][2]);
-                        glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
-                        glEnd();
+                glNormal3fv(t.normVec[i][k+1]);
+                glTexCoord2f(t.tekstury[i][k+1][0], t.tekstury[i][k+1][1]);
+                glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
 
-                        glBegin(GL_TRIANGLES);
-                        glNormal3fv(t.normVec[i][k+1]);
-                        glColor3f(colors[i][k+1][0], colors[i][k+1][1], colors[i][k+1][2]);
-                        glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
-                        glNormal3fv(t.normVec[0][k+1]);
-                        glColor3f(colors[0][k+1][0], colors[0][k+1][1], colors[0][k+1][2]);
-                        glVertex3f(t.getX(i+1,k+1), t.getY(i+1,k+1), t.getZ(i+1,k+1));
-                        glNormal3fv(t.normVec[0][k]);
-                        glColor3f(colors[0][k][0], colors[0][k][1], colors[0][k][2]);
-                        glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
-                        glEnd();
-                    }
-                }
+                glNormal3fv(t.normVec[i+1][k]);
+                glTexCoord2f(t.tekstury[i+1][k][0], t.tekstury[i+1][k][1]);
+                glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
+                glEnd();
+
+                glBegin(GL_TRIANGLES);
+                glNormal3fv(t.normVec[i][k+1]);
+                glTexCoord2f(t.tekstury[i][k+1][0], t.tekstury[i][k+1][1]);
+                glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
+
+                glNormal3fv(t.normVec[i][k+1]);
+                glTexCoord2f(t.tekstury[i+1][k+1][0], t.tekstury[i+1][k+1][1]);
+                glVertex3f(t.getX(i+1,k+1), t.getY(i+1,k+1), t.getZ(i+1,k+1));
+
+                glNormal3fv(t.normVec[i+1][k]);
+                glTexCoord2f(t.tekstury[i+1][k][0], t.tekstury[i+1][k][1]);
+                glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
+                glEnd();
             }
+            else
+            {
+                glBegin(GL_TRIANGLES);
+                glNormal3fv(t.normVec[i][k]);
+                glTexCoord2f(t.tekstury[i][k][0], t.tekstury[i][k][1]);
+                glVertex3f(t.getX(i,k), t.getY(i,k), t.getZ(i,k));
+
+                glNormal3fv(t.normVec[i][k+1]);
+                glTexCoord2f(t.tekstury[i][k+1][0], t.tekstury[i][k+1][1]);
+                glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
+
+                glNormal3fv(t.normVec[0][k]);
+                glTexCoord2f(t.tekstury[i+1][k][0], t.tekstury[i+1][k][1]);
+                glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
+                glEnd();
+
+                glBegin(GL_TRIANGLES);
+                glNormal3fv(t.normVec[i][k+1]);
+                glTexCoord2f(t.tekstury[i][k+1][0], t.tekstury[i][k+1][1]);
+                glVertex3f(t.getX(i,k+1), t.getY(i,k+1), t.getZ(i,k+1));
+
+                glNormal3fv(t.normVec[0][k+1]);
+                glTexCoord2f(t.tekstury[i+1][k+1][0], t.tekstury[i+1][k+1][1]);
+                glVertex3f(t.getX(i+1,k+1), t.getY(i+1,k+1), t.getZ(i+1,k+1));
+
+                glNormal3fv(t.normVec[0][k]);
+                glTexCoord2f(t.tekstury[i+1][k][0], t.tekstury[i+1][k][1]);
+                glVertex3f(t.getX(i+1,k), t.getY(i+1,k), t.getZ(i+1,k));
+                glEnd();
+            }
+        }
+    }
 
 
 }
@@ -540,71 +647,119 @@ void spinEgg()
 void MyInit(void)
 {
 
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     /*************************************************************************************/
 
-    //  Definicja materiału z jakiego zrobiony jest czajnik
-    //  i definicja źródła światła
+// Zmienne dla obrazu tekstury
+
+
+
+    GLbyte *pBytes;
+    GLint ImWidth, ImHeight, ImComponents;
+    GLenum ImFormat;
+// Kolor czyszczący (wypełnienia okna) ustawiono na czarny
+    /*************************************************************************************/
+
+/*************************************************************************************/
+
+// Teksturowanie będzie prowadzone tyko po jednej stronie ściany
+
+    //glEnable(GL_CULL_FACE);
+
+/*************************************************************************************/
+
+//  Przeczytanie obrazu tekstury z pliku o nazwie tekstura.tga
+
+    pBytes = LoadTGAImage("t_512.tga", &ImWidth, &ImHeight, &ImComponents, &ImFormat);
 
     /*************************************************************************************/
-    // Definicja materiału z jakiego zrobiony jest czajnik
 
-    GLfloat mat_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
+// Zdefiniowanie tekstury 2-D
+
+    glTexImage2D(GL_TEXTURE_2D, 0, ImComponents, ImWidth, ImHeight, 0, ImFormat, GL_UNSIGNED_BYTE, pBytes);
+
+/*************************************************************************************/
+
+// Zwolnienie pamięci
+
+    free(pBytes);
+
+/*************************************************************************************/
+
+// Włączenie mechanizmu teksturowania
+
+    glEnable(GL_TEXTURE_2D);
+
+/*************************************************************************************/
+
+// Ustalenie trybu teksturowania
+
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+/*************************************************************************************/
+
+// Określenie sposobu nakładania tekstur
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//  Definicja materiału z jakiego zrobiony jest czajnik
+//  i definicja źródła światła
+
+/*************************************************************************************/
+
+
+/*************************************************************************************/
+// Definicja materiału z jakiego zrobiony jest czajnik
+
+    GLfloat mat_ambient[]  = {1.0, 1.0, 1.0, 1.0};
     // współczynniki ka =[kar,kag,kab] dla światła otoczenia
 
-    GLfloat mat_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat mat_diffuse[]  = {1.0, 1.0, 1.0, 1.0};
     // współczynniki kd =[kdr,kdg,kdb] światła rozproszonego
 
-    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat mat_specular[] = {1.0, 1.0, 1.0, 1.0};
     // współczynniki ks =[ksr,ksg,ksb] dla światła odbitego
 
-    GLfloat mat_shininess = { 100.0 };
+    GLfloat mat_shininess  = {20.0};
     // współczynnik n opisujący połysk powierzchni
 
-    /*************************************************************************************/
-    // Definicja źródła światła
+/*************************************************************************************/
+// Definicja źródła światła
 
-    GLfloat light_position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
+    GLfloat light_position[] = {0.0, 0.0, 10.0, 1.0};
     // położenie źródła
 
 
-    GLfloat light_ambient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    GLfloat light_ambient[] = {0.1, 0.1, 0.1, 1.0};
     // składowe intensywności świecenia źródła światła otoczenia
     // Ia = [Iar,Iag,Iab]
 
-    GLfloat light_diffuse[] = { 0.0f, 0.0f, 1.0f, 1.0f };
+    GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0};
     // składowe intensywności świecenia źródła światła powodującego
     // odbicie dyfuzyjne Id = [Idr,Idg,Idb]
 
-    GLfloat light_specular[] = { 0.0f, 0.0f, 1.0f, 1.0f };
+    GLfloat light_specular[]= {1.0, 1.0, 1.0, 1.0};
     // składowe intensywności świecenia źródła światła powodującego
     // odbicie kierunkowe Is = [Isr,Isg,Isb]
 
-    GLfloat att_constant = { 1.0f };
+    GLfloat att_constant  = {1.0};
     // składowa stała ds dla modelu zmian oświetlenia w funkcji
     // odległości od źródła
 
-    GLfloat att_linear = { 0.05f };
+    GLfloat att_linear    = {0.05};
     // składowa liniowa dl dla modelu zmian oświetlenia w funkcji
     // odległości od źródła
 
-    GLfloat att_quadratic = { 0.001f };
+    GLfloat att_quadratic  = {0.001};
     // składowa kwadratowa dq dla modelu zmian oświetlenia w funkcji
     // odległości od źródła
 
+/*************************************************************************************/
+// Ustawienie parametrów materiału i źródła światła
 
-    GLfloat light_position2[] = { 10.0f, 0.0f, 0.0f, 1.0f };
-    GLfloat light_ambient2[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    GLfloat light_diffuse2[] = { 1.0f, 0.0f, 0.0f, 1.0f };
-    GLfloat light_specular2[] = { 1.0f, 0.0f, 0.0f, 1.0f };
-    GLfloat att_constant2 = { 1.0f };
-    GLfloat att_linear2 = { 0.05f };
-    GLfloat att_quadratic2 = { 0.001f };
-    /*************************************************************************************/
-    // Ustawienie parametrów materiału i źródła światła
-
-    /*************************************************************************************/
-    // Ustawienie patrametrów materiału
+/*************************************************************************************/
+// Ustawienie patrametrów materiału
 
 
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
@@ -612,8 +767,8 @@ void MyInit(void)
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
     glMaterialf(GL_FRONT, GL_SHININESS, mat_shininess);
 
-    /*************************************************************************************/
-    // Ustawienie parametrów 1 źródła
+/*************************************************************************************/
+// Ustawienie parametrów źródła
 
     glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
@@ -624,28 +779,17 @@ void MyInit(void)
     glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, att_linear);
     glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, att_quadratic);
 
-    // Ustawienie parametrów 2 źródła
 
-    glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient2);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse2);
-    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular2);
-    glLightfv(GL_LIGHT1, GL_POSITION, light_position2);
-
-    glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, att_constant2);
-    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, att_linear2);
-    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, att_quadratic2);
-
-
-    /*************************************************************************************/
-    // Ustawienie opcji systemu oświetlania sceny
+/*************************************************************************************/
+// Ustawienie opcji systemu oświetlania sceny
 
     glShadeModel(GL_SMOOTH); // właczenie łagodnego cieniowania
     glEnable(GL_LIGHTING);   // właczenie systemu oświetlenia sceny
     glEnable(GL_LIGHT0);     // włączenie źródła o numerze 0
-    glEnable(GL_LIGHT1);
     glEnable(GL_DEPTH_TEST); // włączenie mechanizmu z-bufora
 
 /*************************************************************************************/
+
 }
 
 /*************************************************************************************/
