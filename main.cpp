@@ -1,33 +1,42 @@
 
 #include "Torus.h"
-static int step = 0;
-static int stepI = 0;
+static bool keepMoving = true;
 /*DODANE*/
-static GLfloat viewer[]= {0.0, 0.0, 10.0};
 static GLfloat R = 10.0;
 static const GLfloat R_min = 2.6;
 static const GLfloat R_max = 23.0;
 
 // inicjalizacja położenia obserwatora
 
-static GLfloat theta = 0.0;   // kąt obrotu obiektu
-static GLfloat fi = 0.0;   // kąt obrotu obiektu
+static GLfloat viewer[] = { 0.0, 0.0, 10.0 };
+static GLfloat theta[] = { 0.0, 0.0, 0.0 }; // trzy kąty obrotu
+// inicjalizacja położenia obserwatora
+
+static GLfloat pix2angle; // przelicznik pikseli na stopnie
+
+int x_pos_old = 0;
+
+int y_pos_old = 0;
+
+int status = 0;
+
+static int delta_x = 0;
+
+static int delta_y = 0;
+
+static GLfloat theta1 = 0.0;   // kąt obrotu obiektu
+static GLfloat fi1 = 0.0;   // kąt obrotu obiektu
+static GLfloat theta2 = 0.0;   // kąt obrotu obiektu
+static GLfloat fi2 = 0.0;   // kąt obrotu obiektu
 static GLfloat pix2angle_X;     // przelicznik pikseli na stopnie
 static GLfloat pix2angle_Y;
 
-static GLint status = 0;       // stan klawiszy myszy
-// 0 - nie naciśnięto żadnego klawisza
-// 1 - naciśnięty został lewy klawisz
-// 2 - naciśnięty został prawy klawisz
-
-static int x_pos_old = 0;       // poprzednia pozycja kursora myszy
-
-static int delta_x = 0;        // różnica pomiędzy pozycją bieżącą
-// i poprzednią kursora myszy
-
-static int y_pos_old = 0;
-
-static int delta_y = 0;
+float x_swiatla = -200;
+float y_swiatla = 0;
+float x_swiatla2 = 200;
+float y_swiatla2 = 0;
+float z_swiatla = 10;
+float z_swiatla2 = 10;
 
 /*********************************/
 
@@ -49,7 +58,7 @@ enum Model{
     POINTS, NET, TRIANGLES
 };
 
-Model model = POINTS;
+Model model = TRIANGLES;
 
 
 void Axes(void)
@@ -99,61 +108,7 @@ void drawTorus(Torus& t)
 {
     GLint N = t.getN();
 
-    switch(model)
-    {
-        case POINTS:
-        {
-            for(int i = 0; i < N-1; i++)
-            {
-                for(int k = 0; k < N-1; k++)
-                {
-                    glBegin(GL_POINTS);
-                    glColor3f(0.0f, 1.0f, 1.0f);
-                    glVertex3f(t.getX(i,k), t.getY(i,k), t.getZ(i,k));
-                    glEnd();
-                }
-            }
-            break;
-        }/*end case POINTS*/
 
-        case NET:
-        {
-            for(int i = 0; i < N-1; i++)
-            {
-                for(int k = 0; k < N-1; k++)
-                {
-                    if(k==step && i ==stepI) {
-
-
-                        glBegin(GL_LINES);
-
-
-                        glColor3f(0.0f, 0.0f, 1.0f);
-                        glVertex3f(t.getX(i, k), t.getY(i, k), t.getZ(i, k));
-                        glVertex3f(t.getX(i, k + 1), t.getY(i, k + 1), t.getZ(i, k + 1));
-                        glEnd();
-
-                        glBegin(GL_LINES);
-
-                        glColor3f(0.0f, 0.0f, 1.0f);
-                        glVertex3f(t.getX(i, k), t.getY(i, k), t.getZ(i, k));
-                        glVertex3f(t.getX(i + 1, k), t.getY(i + 1, k), t.getZ(i + 1, k));
-                        glEnd();
-
-                        glBegin(GL_LINES);
-
-                        glColor3f(0.0f, 0.0f, 1.0f);
-                        glVertex3f(t.getX(i, k), t.getY(i, k), t.getZ(i, k));
-                        glVertex3f(t.getX(i + 1, k + 1), t.getY(i + 1, k + 1), t.getZ(i + 1, k + 1));
-                        glEnd();
-                    }
-                }
-            }
-            break;
-        }/*end case NET*/
-
-        case TRIANGLES:
-        {
             for(int i = 0; i < N-1; i++)
             {
                 for(int k = 0; k < N-1; k++)
@@ -212,59 +167,47 @@ void drawTorus(Torus& t)
                     }
                 }
             }
-        }/*end case TRIANGLES*/
-    }
-}
 
-/*************************************************************************************/
-// Funkcja "bada" stan myszy i ustawia wartości odpowiednich zmiennych globalnych
+
+}
 
 void Mouse(int btn, int state, int x, int y)
 {
-                       // jako pozycji poprzedniej
 
-    if(btn==GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+
+    if (btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
     {
-        x_pos_old=x;        // przypisanie aktualnie odczytanej pozycji kursora
-        y_pos_old=y;                     // jako pozycji poprzedniej
-        status = 1;          // wcięnięty został lewy klawisz myszy
+        x_pos_old = x;         // przypisanie aktualnie odczytanej pozycji kursora
+        y_pos_old = y;
+        status = 1;           // wcięnięty został lewy klawisz myszy
     }
-    else
-    if(btn==GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
-    {
+    else if (btn == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+        x_pos_old = x;
         y_pos_old = y;
         status = 2;
     }
     else
-    {
-        status = 0;
-        y_pos_old=y;
-    }
-                 // nie został wcięnięty żaden klawisz
 
+        status = 0;          // nie został wcięnięty żaden klawisz
 }
 
 /*************************************************************************************/
 // Funkcja "monitoruje" położenie kursora myszy i ustawia wartości odpowiednich
 // zmiennych globalnych
 
-void Motion( GLsizei x, GLsizei y )
+void Motion(GLsizei x, GLsizei y)
 {
 
-
     delta_x = x - x_pos_old;     // obliczenie różnicy położenia kursora myszy
-
-    x_pos_old = x;            // podstawienie bieżącego położenia jako poprzednie
-
     delta_y = y - y_pos_old;
-
-    y_pos_old = y;
+    x_pos_old = x;
+    y_pos_old = y;            // podstawienie bieżącego położenia jako poprzednie
 
     glutPostRedisplay();     // przerysowanie obrazu sceny
 }
 
-
 /*************************************************************************************/
+
 
 /*
 Funkcja rysująca łańcuch torusów
@@ -361,7 +304,6 @@ void drawChain(GLint nT, GLint chainR)
         glTranslated((-1)*chain3D[i][0], (-1)*chain3D[i][1], (-1)*chain3D[i][2]);
     }
 }
-
 
 void drawStraightchain(GLint nT, GLfloat torusR, GLfloat d){
 
@@ -497,54 +439,52 @@ void RenderScene(void)
     // Czyszczenie okna aktualnym kolorem czyszczącym
 
     glLoadIdentity();
-    // Czyszczenie macierzy bieżącej
+    // Czyszczenie macierzy bie??cej
 
-    gluLookAt(viewer[0],viewer[1],viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    gluLookAt(viewer[0], viewer[1], viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
     // Zdefiniowanie położenia obserwatora
 
-
-    if(status == 1)                     // jeśli lewy klawisz myszy wcięnięty
+    if (status == 1)                     // jeśli lewy klawisz myszy wcięnięty
     {
-
-        theta += delta_x*pix2angle_X;
-        fi += delta_y*pix2angle_Y;   // modyfikacja kąta obrotu o kat proporcjonalny
-        // do różnicy położeń kursora myszy
-
+        x_swiatla += delta_x*pix2angle_X;
+        y_swiatla -=delta_y*pix2angle_Y;
+        z_swiatla = 10;
     }
-    if(status == 2)
-    {
-        viewer[2] += delta_y*0.05;
-        if (viewer[2] > R_max)
-            viewer[2] = R_max;
-
-        if(viewer[2] < R_min)
-            viewer[2] = R_min;
-
+    else if (status == 2) {
+        x_swiatla2 += delta_x*pix2angle_X;
+        y_swiatla2 -=delta_y*pix2angle_Y;
+        z_swiatla2 = 10;
     }
 
-    gluLookAt(viewer[0],viewer[1],viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-    glRotatef(theta, 0.0, 1.0, 0.0);  //obrót obiektu o nowy kąt
-    glRotatef(fi, 1.0, 0.0, 0.0);
+
+    gluLookAt(viewer[0], viewer[1], viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
 
-    //Axes();
-    // Narysowanie osi przy pomocy funkcji zdefiniowanej wyżej
+
+    //glColor3f(1.0f, 1.0f, 1.0f);
 
 
+
+    //std::cout<< "light 1" << x_swiatla << " " << y_swiatla << " " <<z_swiatla <<std::endl;
+    GLfloat light_position[] = { x_swiatla/5, y_swiatla/5 , z_swiatla, 1.0f };
+    GLfloat light_position2[] = { x_swiatla2/5 , y_swiatla2/5, z_swiatla2, 1.0f };
+    glLightfv(GL_LIGHT1, GL_POSITION, light_position);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position2);
+
+    glRotatef(theta[0], 1.0, 0.0, 0.0);
+    glRotatef(theta[1], 0.0, 1.0, 0.0);
+    glRotatef(theta[2], 0.0, 0.0, 1.0);
     switch (chainType){
         case STRAIGHT:{ drawStraightchain(_nT, 0.5, D); break;}
         case CIRCLE: { drawChain(_nT, (GLint )_chainR); break;}
-        }
-
+    }
+    //glutSolidTeapot(3.0);
+    // Narysowanie czajnika
 
     glFlush();
     // Przekazanie poleceń rysujących do wykonania
 
-
-
     glutSwapBuffers();
-    //
-
 }
 
 /*************************************************************************************/
@@ -554,121 +494,117 @@ void RenderScene(void)
 void keys(unsigned char key, int x, int y)
 {
     switch (key) {
-        case 'p': { model = POINTS; break;}
-        case 'w': { model = NET; break;}
-        case 's': { model = TRIANGLES; break;}
+
         case '+': { _nT += 2; break;}
         case '-': {
             if (_nT > 10)
                 _nT -= 2;
             break;
         }
-        case '>': {
-            if(chainType == STRAIGHT)
-                D += 0.01; break;
-        }
-        case '<': {
-            if(chainType == STRAIGHT)
-                D -= 0.01;
-            break;
-        }
+
         case 't': {
-            if(chainType == STRAIGHT)
+            if (chainType == STRAIGHT)
                 chainType = CIRCLE;
             else
                 chainType = STRAIGHT;
             break;
-            case 'x': {
-                step++;
-                break;
-            }
-
-            case 'z':{
-                step--;
-                break;
-            }
-            case 'i': {
-                stepI++;
-                break;
-            }
-            case 'u':{
-                stepI--;
-                break;
-            }
         }
+
+        case ' ': {
+            keepMoving = !keepMoving;
+            break;
+        }
+
+    }
+
+    RenderScene(); // przerysowanie obrazu sceny
+}
+
+void spinEgg()
+{
+    if(keepMoving){
+        theta[0] -= 0.5;
+        if (theta[0] > 360.0) theta[0] -= 360.0;
+
+        theta[1] -= 0.5;
+        if (theta[1] > 360.0) theta[1] -= 360.0;
+
+        theta[2] -= 0.5;
+        if (theta[2] > 360.0) theta[2] -= 360.0;
     }
 
 
-
-
-
-    RenderScene(); // przerysowanie obrazu sceny
+    glutPostRedisplay(); //odświeżenie zawartości aktualnego okna
 }
 
 void MyInit(void)
 {
 
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-// Kolor czyszcący (wypełnienia okna) ustawiono na czarny
+
     /*************************************************************************************/
 
-//  Definicja materiału z jakiego zrobiony jest czajnik
-//  i definicja źródła światła
+    //  Definicja materiału z jakiego zrobiony jest czajnik
+    //  i definicja źródła światła
 
-/*************************************************************************************/
+    /*************************************************************************************/
+    // Definicja materiału z jakiego zrobiony jest czajnik
 
-
-/*************************************************************************************/
-// Definicja materiału z jakiego zrobiony jest czajnik
-
-    GLfloat mat_ambient[]  = {1.0, 1.0, 1.0, 1.0};
+    GLfloat mat_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
     // współczynniki ka =[kar,kag,kab] dla światła otoczenia
 
-    GLfloat mat_diffuse[]  = {1.0, 1.0, 1.0, 1.0};
+    GLfloat mat_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
     // współczynniki kd =[kdr,kdg,kdb] światła rozproszonego
 
-    GLfloat mat_specular[] = {1.0, 1.0, 1.0, 1.0};
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
     // współczynniki ks =[ksr,ksg,ksb] dla światła odbitego
 
-    GLfloat mat_shininess  = {20.0};
+    GLfloat mat_shininess = { 100.0 };
     // współczynnik n opisujący połysk powierzchni
 
-/*************************************************************************************/
-// Definicja źródła światła
+    /*************************************************************************************/
+    // Definicja źródła światła
 
-    GLfloat light_position[] = {0.0, 0.0, 10.0, 1.0};
+    GLfloat light_position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
     // położenie źródła
 
 
-    GLfloat light_ambient[] = {0.1, 0.1, 0.1, 1.0};
+    GLfloat light_ambient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     // składowe intensywności świecenia źródła światła otoczenia
     // Ia = [Iar,Iag,Iab]
 
-    GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0};
+    GLfloat light_diffuse[] = { 0.0f, 0.0f, 1.0f, 1.0f };
     // składowe intensywności świecenia źródła światła powodującego
     // odbicie dyfuzyjne Id = [Idr,Idg,Idb]
 
-    GLfloat light_specular[]= {1.0, 1.0, 1.0, 1.0};
+    GLfloat light_specular[] = { 0.0f, 0.0f, 1.0f, 1.0f };
     // składowe intensywności świecenia źródła światła powodującego
     // odbicie kierunkowe Is = [Isr,Isg,Isb]
 
-    GLfloat att_constant  = {1.0};
+    GLfloat att_constant = { 1.0f };
     // składowa stała ds dla modelu zmian oświetlenia w funkcji
     // odległości od źródła
 
-    GLfloat att_linear    = {0.05};
+    GLfloat att_linear = { 0.05f };
     // składowa liniowa dl dla modelu zmian oświetlenia w funkcji
     // odległości od źródła
 
-    GLfloat att_quadratic  = {0.001};
+    GLfloat att_quadratic = { 0.001f };
     // składowa kwadratowa dq dla modelu zmian oświetlenia w funkcji
     // odległości od źródła
 
-/*************************************************************************************/
-// Ustawienie parametrów materiału i źródła światła
 
-/*************************************************************************************/
-// Ustawienie patrametrów materiału
+    GLfloat light_position2[] = { 10.0f, 0.0f, 0.0f, 1.0f };
+    GLfloat light_ambient2[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    GLfloat light_diffuse2[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    GLfloat light_specular2[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    GLfloat att_constant2 = { 1.0f };
+    GLfloat att_linear2 = { 0.05f };
+    GLfloat att_quadratic2 = { 0.001f };
+    /*************************************************************************************/
+    // Ustawienie parametrów materiału i źródła światła
+
+    /*************************************************************************************/
+    // Ustawienie patrametrów materiału
 
 
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
@@ -676,8 +612,8 @@ void MyInit(void)
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
     glMaterialf(GL_FRONT, GL_SHININESS, mat_shininess);
 
-/*************************************************************************************/
-// Ustawienie parametrów źródła
+    /*************************************************************************************/
+    // Ustawienie parametrów 1 źródła
 
     glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
@@ -688,17 +624,28 @@ void MyInit(void)
     glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, att_linear);
     glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, att_quadratic);
 
+    // Ustawienie parametrów 2 źródła
 
-/*************************************************************************************/
-// Ustawienie opcji systemu oświetlania sceny
+    glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient2);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse2);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular2);
+    glLightfv(GL_LIGHT1, GL_POSITION, light_position2);
+
+    glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, att_constant2);
+    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, att_linear2);
+    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, att_quadratic2);
+
+
+    /*************************************************************************************/
+    // Ustawienie opcji systemu oświetlania sceny
 
     glShadeModel(GL_SMOOTH); // właczenie łagodnego cieniowania
     glEnable(GL_LIGHTING);   // właczenie systemu oświetlenia sceny
     glEnable(GL_LIGHT0);     // włączenie źródła o numerze 0
+    glEnable(GL_LIGHT1);
     glEnable(GL_DEPTH_TEST); // włączenie mechanizmu z-bufora
 
 /*************************************************************************************/
-
 }
 
 /*************************************************************************************/
@@ -794,6 +741,8 @@ int main(int argc, char** argv)
     glutReshapeFunc(ChangeSize);
     // Dla aktualnego okna ustala funkcję zwrotną odpowiedzialną
     // zazmiany rozmiaru okna
+
+    glutIdleFunc(spinEgg);
 
     glutMouseFunc(Mouse);
     // Ustala funkcję zwrotną odpowiedzialną za badanie stanu myszy
