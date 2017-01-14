@@ -578,9 +578,12 @@ void RenderScene(void)
     glLightfv(GL_LIGHT1, GL_POSITION, light_position);
     glLightfv(GL_LIGHT0, GL_POSITION, light_position2);
 
+
     glRotatef(theta[0], 1.0, 0.0, 0.0);
     glRotatef(theta[1], 0.0, 1.0, 0.0);
     glRotatef(theta[2], 0.0, 0.0, 1.0);
+
+
     switch (chainType){
         case STRAIGHT:{ drawStraightchain(_nT, 0.5, D); break;}
         case CIRCLE: { drawChain(_nT, (GLint )_chainR); break;}
