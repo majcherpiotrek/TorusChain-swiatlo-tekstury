@@ -1,11 +1,6 @@
 
 #include "Torus.h"
 static bool keepMoving = true;
-/*DODANE*/
-static GLfloat R = 10.0;
-static const GLfloat R_min = 2.6;
-static const GLfloat R_max = 23.0;
-
 // inicjalizacja położenia obserwatora
 
 static GLfloat viewer[] = { 0.0, 0.0, 10.0 };
@@ -314,8 +309,6 @@ void Motion(GLsizei x, GLsizei y)
 }
 
 /*************************************************************************************/
-
-
 /*
 Funkcja rysująca łańcuch torusów
 nT - ilość torusów w łańcuchu
@@ -566,13 +559,6 @@ void RenderScene(void)
 
     gluLookAt(viewer[0], viewer[1], viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
-
-
-    //glColor3f(1.0f, 1.0f, 1.0f);
-
-
-
-    //std::cout<< "light 1" << x_swiatla << " " << y_swiatla << " " <<z_swiatla <<std::endl;
     GLfloat light_position[] = { x_swiatla/5, y_swiatla/5 , z_swiatla, 1.0f };
     GLfloat light_position2[] = { x_swiatla2/5 , y_swiatla2/5, z_swiatla2, 1.0f };
     glLightfv(GL_LIGHT1, GL_POSITION, light_position);
@@ -624,7 +610,9 @@ void keys(unsigned char key, int x, int y)
             keepMoving = !keepMoving;
             break;
         }
-
+        default:{
+            break;
+        }
     }
 
     RenderScene(); // przerysowanie obrazu sceny
