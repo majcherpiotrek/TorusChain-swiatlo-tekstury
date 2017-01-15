@@ -1,18 +1,11 @@
-
+/////////////////////
 #include "Torus.h"
 static bool keepMoving = true;
-/*DODANE*/
-static GLfloat R = 10.0;
-static const GLfloat R_min = 2.6;
-static const GLfloat R_max = 23.0;
-
 // inicjalizacja położenia obserwatora
-
 static GLfloat viewer[] = { 0.0, 0.0, 10.0 };
 static GLfloat theta[] = { 0.0, 0.0, 0.0 }; // trzy kąty obrotu
 // inicjalizacja położenia obserwatora
 
-static GLfloat pix2angle; // przelicznik pikseli na stopnie
 
 int x_pos_old = 0;
 
@@ -24,10 +17,6 @@ static int delta_x = 0;
 
 static int delta_y = 0;
 
-static GLfloat theta1 = 0.0;   // kąt obrotu obiektu
-static GLfloat fi1 = 0.0;   // kąt obrotu obiektu
-static GLfloat theta2 = 0.0;   // kąt obrotu obiektu
-static GLfloat fi2 = 0.0;   // kąt obrotu obiektu
 static GLfloat pix2angle_X;     // przelicznik pikseli na stopnie
 static GLfloat pix2angle_Y;
 
@@ -53,54 +42,6 @@ enum ChainType{
 };
 
 ChainType chainType = STRAIGHT;
-
-enum Model{
-    POINTS, NET, TRIANGLES
-};
-
-Model model = TRIANGLES;
-
-
-void Axes(void)
-{
-
-    point3  x_min = {-7.0, 0.0, 0.0};
-    point3  x_max = { 7.0, 0.0, 0.0};
-    // początek i koniec obrazu osi x
-
-    point3  y_min = {0.0, -7.0, 0.0};
-    point3  y_max = {0.0,  7.0, 0.0};
-    // początek i koniec obrazu osi y
-
-    point3  z_min = {0.0, 0.0, -7.0};
-    point3  z_max = {0.0, 0.0,  7.0};
-    //  początek i koniec obrazu osi y
-
-    glColor3f(1.0f, 0.0f, 0.0f);  // kolor rysowania osi - czerwony
-    glBegin(GL_LINES); // rysowanie osi x
-
-    glVertex3fv(x_min);
-    glVertex3fv(x_max);
-
-    glEnd();
-
-    glColor3f(0.0f, 1.0f, 0.0f);  // kolor rysowania - zielony
-    glBegin(GL_LINES);  // rysowanie osi y
-
-    glVertex3fv(y_min);
-    glVertex3fv(y_max);
-
-    glEnd();
-
-    glColor3f(0.0f, 0.0f, 1.0f);  // kolor rysowania - niebieski
-    glBegin(GL_LINES); // rysowanie osi z
-
-    glVertex3fv(z_min);
-    glVertex3fv(z_max);
-
-    glEnd();
-
-}
 
 /*Funkcja rysująca torus na podstawie przekazanego obiektu w trzech formach w zależności
 od globalnego parametru model*/
@@ -455,17 +396,8 @@ void RenderScene(void)
         y_swiatla2 -=delta_y*pix2angle_Y;
         z_swiatla2 = 10;
     }
-
-
     gluLookAt(viewer[0], viewer[1], viewer[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
-
-
-    //glColor3f(1.0f, 1.0f, 1.0f);
-
-
-
-    //std::cout<< "light 1" << x_swiatla << " " << y_swiatla << " " <<z_swiatla <<std::endl;
     GLfloat light_position[] = { x_swiatla/5, y_swiatla/5 , z_swiatla, 1.0f };
     GLfloat light_position2[] = { x_swiatla2/5 , y_swiatla2/5, z_swiatla2, 1.0f };
     glLightfv(GL_LIGHT1, GL_POSITION, light_position);
@@ -478,11 +410,8 @@ void RenderScene(void)
         case STRAIGHT:{ drawStraightchain(_nT, 0.5, D); break;}
         case CIRCLE: { drawChain(_nT, (GLint )_chainR); break;}
     }
-    //glutSolidTeapot(3.0);
-    // Narysowanie czajnika
 
     glFlush();
-    // Przekazanie poleceń rysujących do wykonania
 
     glutSwapBuffers();
 }
